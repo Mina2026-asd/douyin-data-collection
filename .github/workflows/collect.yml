@@ -1,0 +1,40 @@
+name: 抖音数据采集
+
+on:
+  schedule:
+    - cron: '0 1 * * *'     # 北京时间 9:00
+    - cron: '30 10 * * *'   # 北京时间 18:30
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 安装依赖
+        run: |
+          pip install httpx playwright
+          playwright install --with-deps chromium
+
+      - name: 采集抖音数据
+        env:
+          DOUYIN_COOKIES: ${{ secrets.DOUYIN_COOKIES }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+        run: python scripts/collect_douyin.py
+
+      - name: 上传采集结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: douyin-data-${{ github.run_id }}
+          path: |
+            /tmp/collect_result.json
+            /tmp/collect_log.txt
+          retention-days: 7
